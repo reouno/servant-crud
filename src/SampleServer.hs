@@ -50,7 +50,7 @@ user2 =
     "Albert"
     "Einstein"
     "albert@mc2.org"
-    (read "1905-12-01 00:00:00" :: UTCTime)
+    (read "1905-12-01 00:00:01" :: UTCTime)
 
 users = [(userId1, user1), (userId2, user2)]
 
@@ -83,14 +83,14 @@ newUser pool user = do
 getUser :: Pool -> UserId -> IO User
 getUser pool id' = do
   users <- getUsers pool
-  return $ [user | (userId, user) <- users, userId == id'] !! 0
+  return $ head [user | (userId, user) <- users, userId == id']
 
 -- FIXME: should not throw runtime exception even if user ID not found
 updateUser :: Pool -> UserId -> User -> IO ()
 updateUser pool id' newUser = do
   users <- getUsers pool
     -- just check the existence of id'
-  let _ = [user | (userId, user) <- users, userId == id'] !! 0
+  let _ = head [user | (userId, user) <- users, userId == id']
       replaceUser (userId, user) userId' newUser =
         case userId of
           userId' -> (userId, newUser)

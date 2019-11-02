@@ -1,0 +1,8 @@
+version: '2'
+services:
+  servant-crud:
+    build: .
+    image: leouno/servant-crud
+    ports:
+      - '8081:8081'
+    command: /opt/app/servant-crud-exe
