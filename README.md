@@ -28,3 +28,15 @@ curl -XGET 127.0.0.1:8081/users/1
 # delete user
 curl -XDELETE 127.0.0.1:8081/users/1
 ```
+
+# Build with Docker and create executable Docker image (WIP)
+
+```
+make all
+```
+
+# Run with Docker (WIP)
+
+```
+docker-compose up
+```
