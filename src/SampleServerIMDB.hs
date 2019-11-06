@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module SampleServer
+module SampleServerIMDB
   ( app
   ) where
 

@@ -26,8 +26,15 @@ library:
   source-dirs: src
   dependencies:
     - aeson
+    - conduit
+    - monad-logger
     - mtl
+    - persistent
+    - persistent-sqlite
+    - persistent-template
+    - resource-pool
     - servant-server
+    - string-conversions
     - stm
     - time
 
