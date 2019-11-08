@@ -26,6 +26,7 @@ library:
   source-dirs: src
   dependencies:
     - aeson
+    - basement
     - conduit
     - monad-logger
     - mtl
@@ -33,6 +34,7 @@ library:
     - persistent-sqlite
     - persistent-template
     - resource-pool
+    - safe-exceptions
     - servant-server
     - string-conversions
     - stm

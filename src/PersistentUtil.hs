@@ -1,10 +1,23 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs            #-}
 
 module PersistentUtil
-  (
+  ( mkSqlitePool
+  , selectList'
+  , get'
+  , insert'
+  , replace'
+  , update'
+  , delete'
+  , sqlKey2Int
+  , int2SqlKey
+  , entity2Tuple
+  , KeyNotFoundException(..)
   ) where
 
+import           Basement.IntegralConv   ( int64ToInt, intToInt64 )
 import           Conduit                 ( MonadUnliftIO )
+import           Control.Exception.Safe
 import           Control.Monad.Logger    ( runStderrLoggingT )
 import           Data.Pool               ( Pool )
 import           Data.String.Conversions ( cs )
@@ -59,6 +72,20 @@ insert' ::
   -> m (Key record)
 insert' = runSqlPool . insert
 
+replace' ::
+     ( PersistStoreWrite backend
+     , IsPersistBackend backend
+     , MonadUnliftIO m
+     , PersistEntity record
+     , PersistEntityBackend record ~ BaseBackend backend
+     , BaseBackend backend ~ SqlBackend
+     )
+  => Key record
+  -> record
+  -> Data.Pool.Pool backend
+  -> m ()
+replace' k r = runSqlPool $ replace k r
+
 update' ::
      ( PersistStoreWrite backend
      , IsPersistBackend backend
@@ -71,7 +98,7 @@ update' ::
   -> [Update record]
   -> Data.Pool.Pool backend
   -> m record
-update' k rs = runSqlPool $ updateGet k rs
+update' k us = runSqlPool $ updateGet k us
 
 delete' ::
      ( PersistStoreWrite backend
@@ -85,3 +112,24 @@ delete' ::
   -> Data.Pool.Pool backend
   -> m ()
 delete' = runSqlPool . delete
+
+{-
+ - data conversion functions
+ -}
+sqlKey2Int :: ToBackendKey SqlBackend record => Key record -> Int
+sqlKey2Int = int64ToInt . fromSqlKey
+
+int2SqlKey :: ToBackendKey SqlBackend record => Int -> Key record
+int2SqlKey = toSqlKey . intToInt64
+
+entity2Tuple :: ToBackendKey SqlBackend b => Entity b -> (Int, b)
+entity2Tuple entity = (sqlKey2Int . entityKey $ entity, entityVal entity)
+
+{-
+ - Exceptions
+ -}
+newtype KeyNotFoundException =
+  KeyNotFoundException String
+  deriving (Show)
+
+instance Exception KeyNotFoundException
