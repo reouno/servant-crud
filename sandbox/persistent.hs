@@ -1,4 +1,5 @@
 :set -XGADTs
+:set -XScopedTypeVariables
 
 import           Basement.IntegralConv
 import           Database.Persist.Sql
@@ -19,3 +20,9 @@ userEnts <- selectList' pool :: IO [Entity User]
 users = map entityVal userEnts :: [User] 
 
 userRecords <- map entity2Tuple <$> selectList' pool :: IO [(Int, User)]
+
+
+{-
+ - sample code using safe-exceptions
+ -}
+import           Control.Exception.Safe

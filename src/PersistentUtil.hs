@@ -72,6 +72,7 @@ insert' ::
   -> m (Key record)
 insert' = runSqlPool . insert
 
+-- usually used as `update` method because of its simplicity
 replace' ::
      ( PersistStoreWrite backend
      , IsPersistBackend backend
@@ -86,6 +87,7 @@ replace' ::
   -> m ()
 replace' k r = runSqlPool $ replace k r
 
+-- see also `replace'` method
 update' ::
      ( PersistStoreWrite backend
      , IsPersistBackend backend

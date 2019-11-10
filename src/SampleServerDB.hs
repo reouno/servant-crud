@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -16,6 +17,7 @@
 module SampleServerDB where
 
 import           Control.Exception.Safe
+import           Control.Monad           ( when )
 import           Control.Monad.IO.Class  ( MonadIO, liftIO )
 import           Control.Monad.Logger    ( runStderrLoggingT )
 import           Data.Aeson              ( FromJSON, ToJSON )
@@ -27,6 +29,7 @@ import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           GHC.Generics            ( Generic )
 import           Servant
+import           System.Directory
 
 import           PersistentUtil
 import           ServantCrud             ( APIFor )
@@ -84,15 +87,8 @@ newUser :: Pool -> User -> IO UserId'
 newUser pool user = sqlKey2Int <$> insert' user pool
 
 -- FIXME: should implement appropriate error handling, not to raise runtime exception
-getUser :: Pool -> UserId' -> IO User
+getUser :: (MonadThrow m, MonadIO m) => Pool -> UserId' -> m User
 getUser pool userId = do
-  mayUser <- get' (int2SqlKey userId) pool
-  case mayUser of
-    Just user -> return user
-    Nothing   -> error $ "user id `" ++ show userId ++ "` not found in DB table"
-
-getUser' :: (MonadThrow m, MonadIO m) => Pool -> UserId' -> m User
-getUser' pool userId = do
   mayUser <- liftIO $ runSqlPool (get (int2SqlKey userId)) pool
   case mayUser of
     Just user -> return user
@@ -100,6 +96,14 @@ getUser' pool userId = do
       throw $
       KeyNotFoundException $
       "user id `" ++ show userId ++ "` not found in DB table"
+
+-- use this if default user should be returned when the user ID not found
+getUserCatch :: (MonadCatch m, MonadIO m) => Pool -> UserId' -> m User
+getUserCatch pool userId = getUser pool userId `catch` returnDefaultUser
+  where
+    returnDefaultUser ::
+         (MonadCatch m, MonadIO m) => KeyNotFoundException -> m User
+    returnDefaultUser _ = liftIO $ return user1
 
 updateUser :: Pool -> UserId' -> User -> IO ()
 updateUser pool userId user = replace' (int2SqlKey userId) user pool
@@ -114,18 +118,24 @@ userServer pool = getEntities pool :<|> newEntity pool :<|> operations pool
     newEntity pool user = liftIO $ newUser pool user >> return NoContent
     operations pool id' =
       getEntity pool id' :<|> updateEntity pool id' :<|> deleteEntity pool id'
-    getEntity pool id' = liftIO $ getUser pool id'
+    getEntity = getUser
     updateEntity pool id' user =
       liftIO $ updateUser pool id' user >> return NoContent
     deleteEntity pool id' = liftIO $ deleteUser pool id' >> return NoContent
 
-server :: IO (Server UserAPI)
-server = do
+doMigration :: IO Pool
+doMigration = do
   let _database_ = "SampleServerDB-dev"
+  fileExists <- doesFileExist _database_
+  when fileExists $ removeFile _database_
   pool <- mkPool _database_
   initialize pool
   newUser pool user1
-  return $ userServer pool
+  newUser pool user2
+  return pool
+
+server :: IO (Server UserAPI)
+server = userServer <$> doMigration
 
 app :: IO Application
 app = serve userAPI <$> server

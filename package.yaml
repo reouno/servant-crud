@@ -28,6 +28,7 @@ library:
     - aeson
     - basement
     - conduit
+    - directory
     - monad-logger
     - mtl
     - persistent
